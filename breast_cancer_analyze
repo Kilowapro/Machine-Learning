@@ -1,0 +1,88 @@
+#breast cancer data
+#record 569 attribute 30
+#classification 0 1
+from Tools.scripts.dutree import display
+from sklearn import datasets
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.neighbors import NearestCentroid
+from sklearn import svm
+from matplotlib import pyplot
+from sklearn import tree
+import pandas as pd
+
+#load data
+cancer = datasets.load_breast_cancer()
+
+x = cancer.data
+y = cancer.target
+
+#preprcoess data
+pyplot.plot(x)
+pyplot.show()
+
+mm_x = MinMaxScaler()
+x = mm_x.fit_transform(x)
+
+pyplot.plot(x)
+pyplot.show()
+
+x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.2)
+
+#分类
+#逻辑回归  & 网格搜寻
+model = LogisticRegression()
+parm_grid=[
+    {'C':[0.8,0.9,1,1.1],'solver':['liblinear']}
+]
+grid_search = GridSearchCV(model, parm_grid, cv=10,
+                           scoring='accuracy')
+grid_search.fit(x_train,y_train)
+print("the best params: ",grid_search.best_params_)
+
+#model predict
+logic_pred = grid_search.predict(x_test)
+
+#支持向量机
+model=svm.SVC(C=0.8, kernel='rbf', gamma=20, decision_function_shape='ovr')
+# kernel='linear'时，为线性核，C越大分类效果越好，但有可能会过拟合（defaul C=1）。
+# kernel='rbf'时（default），为高斯核，gamma值越小，分类界面越连续；gamma值越大，分类界面越“散”，分类效果越好，但有可能会过拟合。
+# decision_function_shape='ovr'时，为one v rest，即一个类别与其他类别进行划分，
+# decision_function_shape='ovo'时，为one v one，即将类别两两之间进行划分，用二分类的方法模拟多分类的结果。
+model.fit(x_train,y_train)
+svm_pred=model.predict(x_test)
+
+#决策树
+def minsplit_score(val):
+    model = tree.DecisionTreeClassifier(criterion='gini', min_impurity_decrease=val)
+#通过min_impurity_decrease来优化模型
+#这个参数用来指定信息墒或者基尼不纯度的阀值，当决策树分裂后，其信息增益低于这个阀值时则不再分裂。
+    model.fit(x_train,y_train)
+    return (model.score(x_train,y_train),model.score(x_test,y_test))
+tree_pred=model.predict(x_test)
+
+#K近邻
+model=NearestCentroid()
+model.fit(x_train,y_train)
+nc_pred=model.predict(x_test)
+
+#model evaluation
+print("逻辑model accuracy is "+str(accuracy_score(y_test,logic_pred)))
+print("逻辑model precision is "+str(precision_score(y_test,logic_pred, average='macro')))
+print("逻辑model recall is " +str(recall_score(y_test,logic_pred,average='macro')))
+print("向量机model accuracy is "+str(accuracy_score(y_test,svm_pred)))
+print("向量机model precision is "+str(precision_score(y_test,svm_pred, average='macro')))
+print("向量机model recall is " +str(recall_score(y_test,svm_pred,average='macro')))
+print("决策树model accuracy is "+str(accuracy_score(y_test,tree_pred)))
+print("决策树model precision is "+str(precision_score(y_test,tree_pred, average='macro')))
+print("决策树model recall is " +str(recall_score(y_test,tree_pred,average='macro')))
+print("K近邻model accuracy is "+str(accuracy_score(y_test,nc_pred)))
+print("K近邻model precision is "+str(precision_score(y_test,nc_pred, average='macro')))
+print("K近邻model recall is " +str(recall_score(y_test,nc_pred,average='macro')))
